@@ -1,7 +1,6 @@
 set_global_assignment -name SYSTEMVERILOG_FILE rtl/rom_loader.sv
 set_global_assignment -name VERILOG_FILE rtl/ttl_chips.v
 set_global_assignment -name VERILOG_FILE rtl/perf_ram.v
-set_global_assignment -name VERILOG_FILE rtl/perf_roms.v
 set_global_assignment -name VERILOG_FILE rtl/perf_core.v
 set_global_assignment -name VERILOG_FILE rtl/perf_background.v
 set_global_assignment -name VERILOG_FILE rtl/perf_sprites.v
