@@ -277,7 +277,7 @@ localparam CONF_STR = {
 	"OTU,Aspect ratio,Original,Full Screen;",
 	"O2,Orientation,Vert,Horz;",
 	"O35,Scandoubler Fx,None,HQ2x,CRT 25%,CRT 50%,CRT 75%;",
-	"OV,Frequency,60,Original;",	
+//	"OV,Frequency,60,Original;",	
 	"-;",
 	"DIP;",
 	"-;",
@@ -287,7 +287,7 @@ localparam CONF_STR = {
 	"P1OQ,Dim video after 10s,On,Off;",
 	"-;",
 	"R0,Reset;",
-	"J1,Fire,Weapon Select,Start 1P,Start 2P,Coin,Pause;",
+	"J1,Button 1,Button 2,Start 1P,Start 2P,Coin,Pause;",
 	//"Jn,A,B,Start,Select;",
 	"V,v",`BUILD_DATE
 };
