@@ -1,6 +1,6 @@
 # PERFORMAN
 
-This core is based on the Slapfight core.  A big thank you to Kold666 who helped me figure out the differences between the boards.
+This core is based on the Slapfight core.  A big thank you to Kold666 who helped me figure out the differences between the Performan and Slap Fight PCBs.
 
 Thank you to the following members of the MiSTer community: Boogermann, misterretrowolf, Sorgelig, Jotego, JimmyStones, Kitrinx & BirdyBro.
 
