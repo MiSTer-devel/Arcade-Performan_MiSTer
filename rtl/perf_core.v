@@ -225,7 +225,7 @@ background_layer slap_background(
 	.dn_wr(dn_wr),
 	.BG_HI_out(BG_HI_out),
 	.BG_LO_out(BG_LO_out),
-	.pixel_output(BG_PX_D),
+	.pixel_output(BG_PX_D)
 );
 
 sprite_layer slap_sprites(
