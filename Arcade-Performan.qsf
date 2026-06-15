@@ -424,5 +424,5 @@ set_global_assignment -name VERILOG_FILE rtl/jtframe_jt49_filters.v
 set_global_assignment -name SYSTEMVERILOG_FILE "Arcade-Performan.sv"
 set_global_assignment -name SDC_FILE "Arcade-Performan.sdc"
 set_global_assignment -name SIGNALTAP_FILE sprites.stp
-set_instance_assignment -name PARTITION_HIERARCHY root_partition -to | -section_id Top
 set_global_assignment -name SLD_FILE db/sprites_auto_stripped.stp
+set_instance_assignment -name PARTITION_HIERARCHY root_partition -to | -section_id Top

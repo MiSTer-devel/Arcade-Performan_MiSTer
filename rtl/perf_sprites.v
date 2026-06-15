@@ -8,6 +8,7 @@ module sprite_layer (
 	input [7:0] VPIX,
 	input [11:0] HPIX,
 	input SCREEN_FLIP,
+	input USER_FLIP,
 	input SPRITE_RAM,
 	input Z80_WR,
 	input Z80_RD,
@@ -58,6 +59,20 @@ reg [8:0] HPIX_LT;
 always @(posedge pixel_clk) begin 
 	HPIX_LT <= HPIX[8:0];  //this is a 'de-scrambled' version of HPIX_PT - U2D
 end
+
+localparam signed [9:0]  V_SPR_DELTA_ON = 10'sd2;
+localparam signed [10:0] H_SPR_DELTA_ON = -11'sd4;
+
+wire signed [9:0]  V_SPR_DELTA_EFF = USER_FLIP ? V_SPR_DELTA_ON : 10'sd0;
+wire signed [10:0] H_SPR_DELTA_EFF = USER_FLIP ? H_SPR_DELTA_ON : 11'sd0;
+
+wire signed [9:0]  VPIX_s      = $signed({2'b00, VPIX});
+wire signed [9:0]  VPIX_SPR_s  = VPIX_s + V_SPR_DELTA_EFF;
+wire        [7:0]  VPIX_SPR    = VPIX_SPR_s[7:0];
+
+wire signed [10:0] HPIX_LT_s     = $signed({2'b00, HPIX_LT});
+wire signed [10:0] HPIX_LT_SPR_s = HPIX_LT_s + H_SPR_DELTA_EFF;
+wire        [8:0]  HPIX_LT_SPR   = HPIX_LT_SPR_s[8:0];
 
 wire [7:0] ROM18_out;
 
@@ -245,7 +260,7 @@ wire SPR32_BUF_WR = 	S2_U4C_C&S2_U4A_6;
 reg [3:0] SPR_32K_HI;
 always @(posedge S2_U5A_A) SPR_32K_HI <= (!SPR32_BUF_WR) ? S2_U4F_sum : S2_U2F_out;
 
-assign SPR_32K_A[7:0] = (CPU_RAM_SYNC) ? SPR_VPOS_CNT : VPIX-1; //VPIX-1 hack
+assign SPR_32K_A[7:0] = (CPU_RAM_SYNC) ? SPR_VPOS_CNT : (VPIX_SPR - 8'd1); //VPIX-1 hack
 assign SPR_32K_A[11:8] = SPR_32K_HI;
 
 ttl_74283 #(.WIDTH(4), .DELAY_RISE(0), .DELAY_FALL(0)) U9E(
@@ -446,10 +461,10 @@ always @(posedge pixel_clk) LNBF_CNT <= (!SPR_LB_LD) ? ({SPR_EXTRA_out[0]&(pcb!=
 													 (!S2_U5A_D) ? LNBF_CNT-1 : LNBF_CNT; //S2_U1M,U2M & U3M
 
 assign LINEBUF_A_A = (CPU_RAM_LBUF) ? 9'd0 :
-							  (!SPR_LINEA) ? HPIX_LT : LNBF_CNT; //S2_U2T, U4T
+							  (!SPR_LINEA) ? HPIX_LT_SPR : LNBF_CNT; //S2_U2T, U4T
 
 assign LINEBUF_B_A = (CPU_RAM_LBUF) ? 9'd0 :
-							  (!SPR_LINEB) ? HPIX_LT : LNBF_CNT; //S2_U2T, U4T
+							  (!SPR_LINEB) ? HPIX_LT_SPR : LNBF_CNT; //S2_U2T, U4T
 							  
 //SPR_EXTRA_OUT[7]  = SPRITE PRIORITY
 //IO_C_SPRITE_COLOR = USED WHEN IN 'POWER' MODE TO SHIFT COLOURS TO UPPER HALF OF PALLET

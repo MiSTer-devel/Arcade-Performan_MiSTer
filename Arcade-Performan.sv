@@ -276,6 +276,7 @@ localparam CONF_STR = {
 	"A.PERFORMAN;;",
 	"OTU,Aspect ratio,Original,Full Screen;",
 	"O2,Orientation,Vert,Horz;",
+	"O6,Flip,Off,On;",
 	"O35,Scandoubler Fx,None,HQ2x,CRT 25%,CRT 50%,CRT 75%;",
 //	"OV,Frequency,60,Original;",	
 	"-;",
@@ -388,8 +389,9 @@ wire [3:0] b;
 wire [11:0] rgb = {rgb_out[11:8],rgb_out[7:4],rgb_out[3:0]};//23:0
 
 wire no_rotate = status[2] | direct_video;
-wire rotate_ccw = 0;
-wire flip = 0;
+wire core_flip = status[6];
+wire rotate_ccw = 1'b0;
+wire flip = 1'b0;
 
 screen_rotate screen_rotate (.*);
 
@@ -477,6 +479,7 @@ performan_fpga perfcore(
 	.H_BLANK(hblank),
 	.V_BLANK(vblank),
 	.RESET_n(~reset),
+	.flip(core_flip),
 	.pause(pause_cpu),
 	.CONTROLS(~{m_coin,m_start2p,m_start1p,m_shoot2,m_shoot,m_up,m_down,m_left,m_right}),
 	.DIP1(sw[1]), 
