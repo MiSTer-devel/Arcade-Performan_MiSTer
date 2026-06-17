@@ -32,6 +32,7 @@ module performan_fpga(
 	output H_BLANK,
 	output V_BLANK,
 	input RESET_n,				
+	input flip,
 	input pause,
 	input [8:0] CONTROLS,	
 	input [7:0] DIP1,
@@ -62,7 +63,7 @@ reg RESET_V_COUNTERS;
 //******************** VERTICAL COUNTER LOGIC******************
 always @(posedge LINE_CLK) begin
 	VCNT <= (!RESET_V_COUNTERS) ? 12'b000000000000 : VCNT+1;
-	VPIX <= (IO2_SF) ? 8'b11111111^VCNT[7:0] : VCNT[7:0];
+	VPIX <= (draw_flip) ? 8'b11111111 ^ VCNT[7:0] : VCNT[7:0];
 end
 
 wire LINE_CLK=!U1C_Q[2];
@@ -81,6 +82,33 @@ wire U8E_cout;
 
 always @(posedge V_SCRL_SEL) VSCRL_sum_in<=0;		//no vertical scroll - Performan
 always @(posedge H_SYNC) LINE_CLK2<=ROM15_out[1];
+
+reg flip_s1, flip_s2;
+reg line_clk2_d;
+reg flip_lat;
+reg draw_flip;
+
+always @(posedge clkm_master or negedge RESET_n) begin
+    if (!RESET_n) begin
+        flip_s1     <= 1'b0;
+        flip_s2     <= 1'b0;
+        line_clk2_d <= 1'b0;
+        flip_lat    <= 1'b0;
+        draw_flip   <= 1'b0;
+        IO2_SF      <= 1'b1;
+    end else begin
+        flip_s1 <= flip;
+        flip_s2 <= flip_s1;
+
+        line_clk2_d <= LINE_CLK2;
+
+        if (!line_clk2_d && LINE_CLK2) begin
+            flip_lat  <= flip_s2;
+            draw_flip <= io_sf_hw ^ flip_s2;
+            IO2_SF    <= 1'b1;
+        end
+    end
+end
 
 ttl_7474 #(.BLOCKS(1), .DELAY_RISE(0), .DELAY_FALL(0)) U9H_A(
 	.n_pre(PUR),
@@ -134,6 +162,7 @@ always @(*) begin
 		
 end
 
+wire [8:0] HPIX_DRAW = flip_lat ? (9'd258 - HPIX) : HPIX;
 wire [3:0] U1J_sum,U2J_sum,U1H_sum;
 wire U1J_cout,U2J_cout,U1H_cout,CPU_RAM_SYNC,CPU_RAM_LBUF;
 
@@ -160,7 +189,7 @@ ls175 U1C(
 
 
 ttl_74283 #(.WIDTH(4), .DELAY_RISE(0), .DELAY_FALL(0)) U1J(
-	.a(HPIX[3:0]),
+	.a(HPIX_DRAW[3:0]),
 	.b(HSCRL[3:0]),
 	.c_in(1'b0),  
 	.sum(U1J_sum),
@@ -168,7 +197,7 @@ ttl_74283 #(.WIDTH(4), .DELAY_RISE(0), .DELAY_FALL(0)) U1J(
 );
 
 ttl_74283 #(.WIDTH(4), .DELAY_RISE(0), .DELAY_FALL(0)) U2J(
-	.a(HPIX[7:4]),
+	.a(HPIX_DRAW[7:4]),
 	.b(HSCRL[7:4]),
 	.c_in(U1J_cout),  
 	.sum(U2J_sum),
@@ -176,7 +205,7 @@ ttl_74283 #(.WIDTH(4), .DELAY_RISE(0), .DELAY_FALL(0)) U2J(
 );
 
 ttl_74283 #(.WIDTH(4), .DELAY_RISE(0), .DELAY_FALL(0)) U1H(
-	.a({3'b000,HPIX[8]}),
+	.a({3'b000,HPIX_DRAW[8]}),
 	.b({3'b000,HSCRL[8]}),
 	.c_in(U2J_cout),  
 	.sum(U1H_sum),
@@ -197,7 +226,29 @@ wire FG_RAM_nWE2,FG_RAM_nWE1;
 not U3D_C(FG_RAM_nWE1,FG_RAM_nWE2);
 not U3D_D(FG_RAM_nWE,FG_RAM_nWE1);
 
+wire bg_draw_flip = flip_lat ? ~draw_flip : draw_flip;	
+wire [7:0] VPIX_DRAW = flip_lat ? (~VPIX) : VPIX;
 
+localparam signed [9:0]  FLIP_VPOS_ADJ = 10'sd17;  // vertical adjust when flip is ON
+localparam signed [10:0] FLIP_HPOS_ADJ = -11'sd4;  // horizontal adjust when flip is ON
+
+wire signed [9:0]  FLIP_VPOS_EFF = flip_lat ? FLIP_VPOS_ADJ : 10'sd0;
+wire signed [10:0] FLIP_HPOS_EFF = flip_lat ? FLIP_HPOS_ADJ : 11'sd0;
+
+wire signed [9:0]  BG_VPIX_s      = $signed({2'b00, VPIX_DRAW}) + FLIP_VPOS_EFF;
+wire        [7:0]  BG_VPIX_ADJ    = BG_VPIX_s[7:0];
+
+wire signed [9:0]  BG_VSCRL_s     = $signed({2'b00, VSCRL}) + FLIP_VPOS_EFF;
+wire        [7:0]  BG_VSCRL_ADJ   = BG_VSCRL_s[7:0];
+
+wire signed [10:0] BG_HSCRL_s     = $signed({2'b00, HPIXSCRL}) + FLIP_HPOS_EFF;
+wire        [8:0]  BG_HSCRL_ADJ   = BG_HSCRL_s[8:0];
+
+wire signed [9:0]  SPR_VPIX_s     = $signed({2'b00, VPIX}) + FLIP_VPOS_EFF;
+wire        [7:0]  SPR_VPIX_ADJ   = SPR_VPIX_s[7:0];
+
+wire signed [10:0] SPR_HPIX_s     = $signed({2'b00, HPIX_DRAW}) + FLIP_HPOS_EFF;
+wire        [8:0]  SPR_HPIX_ADJ   = SPR_HPIX_s[8:0];
 
 wire [7:0] FG_PX_D;
 wire [8:0] HPIX_LT;
@@ -206,10 +257,10 @@ background_layer slap_background(
 	.master_clk(clkm_master),
 	.pixel_clk(pixel_clk),
 	.pcb(pcb),
-	.VPIX(VPIX),	
-	.VPIXSCRL(VSCRL),
-	.HPIXSCRL(HPIXSCRL),
-	.SCREEN_FLIP(IO2_SF),
+	.VPIX(BG_VPIX_ADJ),	
+	.VPIXSCRL(BG_VSCRL_ADJ),
+	.HPIXSCRL(BG_HSCRL_ADJ),
+	.SCREEN_FLIP(draw_flip),
 	.BACKGRAM_1(BACKGRAM_1),
 	.BACKGRAM_2(BACKGRAM_2),
 	.Z80_WR(Z80_WR),
@@ -234,9 +285,10 @@ sprite_layer slap_sprites(
 	.npixel_clk(clk_6M_1),
 	.pixel_clk_lb(clk_6M_3),
 	.pcb(pcb),	
-	.VPIX(VPIX),
-	.HPIX(HPIX), 
-	.SCREEN_FLIP(IO2_SF),
+	.VPIX(SPR_VPIX_ADJ),
+	.HPIX(SPR_HPIX_ADJ), 
+	.SCREEN_FLIP(~draw_flip),
+	.USER_FLIP(flip_lat),
 	.SPRITE_RAM(SPRITE_RAM),
 	.Z80_WR(Z80_WR),
 	.Z80_RD(Z80_RD),
@@ -415,14 +467,15 @@ ls138x U9K( //sf
   .Y({ATRRAM,CHARAM,SEL_MCU_PORT,SPRITE_RAM,BACKGRAM_2,BACKGRAM_1,AUDIO_CPU_PORT,SEL_Z80M_RAM})
 );
 
-wire RESET_68705,IO_C_SPRITE_COLOUR,U9J_Q5,SEL_ROM_BANK_SH,INT_ENABLE,IO_4_CPU_RAM,AU_ENABLE,IO2_SF;
+wire RESET_68705,IO_C_SPRITE_COLOUR,U9J_Q5,SEL_ROM_BANK_SH,INT_ENABLE,IO_4_CPU_RAM,io_sf_hw,AU_ENABLE;
+reg  IO2_SF;
 
 mux1_8 U9J( //sf
 	.nEN(Z80M_IOREQ|Z80_WR),
 	.nRST(RESET_n),
 	.D(Z80A_addrbus[0]),
 	.A(Z80A_addrbus[3:1]),
-	.Q({RESET_68705,IO_C_SPRITE_COLOUR,U9J_Q5,SEL_ROM_BANK_SH,INT_ENABLE,IO_4_CPU_RAM,IO2_SF,AU_ENABLE})
+	.Q({RESET_68705,IO_C_SPRITE_COLOUR,U9J_Q5,SEL_ROM_BANK_SH,INT_ENABLE,IO_4_CPU_RAM,io_sf_hw,AU_ENABLE})
 );
 
 //main CPU (Z80A) work RAM - dual port RAM for hi-score logic
